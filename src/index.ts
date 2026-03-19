@@ -498,12 +498,12 @@ function generateChangelogMarkdown(data: ChangelogData, repoFullName: string): s
 
     lines.push(`## [${entry.tag_name}](${releaseUrl})`);
     lines.push(``);
-    lines.push(`**${releaseName}** - ${releaseDate}`);
+    lines.push(`**${releaseName}**`);
     if (entry.prerelease) {
       lines.push(` *(Pre-release)*`);
     }
     lines.push(``);
-    lines.push(`**Author:** [${entry.author.login}](${entry.author.html_url})`);
+    lines.push(`**Update Date:** ${releaseDate}`);
     lines.push(``);
 
     if (entry.body) {

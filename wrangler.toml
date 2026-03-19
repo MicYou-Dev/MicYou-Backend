@@ -1,4 +1,4 @@
-name = "github-release-telegram-bot"
+name = "micyou-backend"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 

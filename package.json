@@ -1,5 +1,5 @@
 {
-  "name": "github-release-telegram-bot",
+  "name": "micyou-backend",
   "version": "1.0.0",
   "description": "GitHub Release notification bot for Telegram, deployed on Cloudflare Workers",
   "main": "src/index.ts",

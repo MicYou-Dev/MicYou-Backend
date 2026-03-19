@@ -17,13 +17,11 @@ export function generateChangelogMarkdown(data: ChangelogData, _repoFullName: st
   ];
 
   for (const entry of data.entries) {
-    const releaseName = entry.name || entry.tag_name;
     const releaseDate = formatDate(entry.published_at);
     const releaseUrl = entry.html_url;
 
     lines.push(`## [${entry.tag_name}](${releaseUrl})`);
     lines.push(``);
-    lines.push(`**${releaseName}**`);
     if (entry.prerelease) {
       lines.push(` *(Pre-release)*`);
     }

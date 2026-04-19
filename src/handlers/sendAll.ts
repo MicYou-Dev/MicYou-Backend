@@ -8,6 +8,20 @@ import { fetchAllReleases } from '../github';
 import { sendTelegramMessage } from '../telegram/api';
 import { buildApiReleaseMessage } from '../telegram/messages';
 
+function resolveThreadId(env: Env, threadId?: number): number | undefined {
+  return threadId ?? (env.TG_THREAD_ID ? parseInt(env.TG_THREAD_ID) : undefined);
+}
+
+function isAuthorizedAdminRequest(request: Request, env: Env): boolean {
+  const url = new URL(request.url);
+  const querySecret = url.searchParams.get('secret');
+  const adminToken = request.headers.get('X-Admin-Token');
+
+  const byAdminToken = Boolean(env.ADMIN_PASSWORD && adminToken && adminToken === env.ADMIN_PASSWORD);
+  const byLegacySecret = Boolean(querySecret && querySecret === env.GITHUB_WEBHOOK_SECRET);
+  return byAdminToken || byLegacySecret;
+}
+
 /**
  * 执行发送所有 Release 的操作
  */
@@ -24,7 +38,7 @@ export async function executeSendAll(
 
     const repoFullName = getRepoFullName();
     const repoUrl = getRepoUrl();
-    const effectiveThreadId = threadId ?? (env.TG_THREAD_ID ? parseInt(env.TG_THREAD_ID) : undefined);
+    const effectiveThreadId = resolveThreadId(env, threadId);
     let sentCount = 0;
 
     for (const release of releases) {
@@ -61,6 +75,52 @@ export async function executeSendAll(
 }
 
 /**
+ * 执行发送最新 Release 的操作
+ */
+export async function executeSendLatest(
+  env: Env,
+  threadId?: number
+): Promise<{ success: boolean; message: string; tagName?: string }> {
+  try {
+    const releases = await fetchAllReleases(GITHUB_OWNER, GITHUB_REPO, env.GITHUB_TOKEN);
+
+    if (releases.length === 0) {
+      return { success: true, message: 'No releases found' };
+    }
+
+    const latestRelease = releases[releases.length - 1];
+    const message = buildApiReleaseMessage(latestRelease, getRepoFullName(), getRepoUrl());
+    const telegramResponse = await sendTelegramMessage(
+      env.TG_BOT_TOKEN,
+      env.TG_CHAT_ID,
+      message,
+      'Markdown',
+      resolveThreadId(env, threadId)
+    );
+
+    if (!telegramResponse.ok) {
+      const errorText = await telegramResponse.text();
+      return {
+        success: false,
+        message: `Failed to send latest release: ${errorText}`,
+        tagName: latestRelease.tag_name,
+      };
+    }
+
+    return {
+      success: true,
+      message: `Sent latest release ${latestRelease.tag_name}`,
+      tagName: latestRelease.tag_name,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
  * 处理 /sendAll 命令 - 发送所有历史 Release（需要管理员验证）
  */
 export async function handleSendAll(request: Request, env: Env): Promise<Response> {
@@ -71,12 +131,10 @@ export async function handleSendAll(request: Request, env: Env): Promise<Respons
     });
   }
 
-  const url = new URL(request.url);
-  const secret = url.searchParams.get('secret');
-  if (!secret || secret !== env.GITHUB_WEBHOOK_SECRET) {
+  if (!isAuthorizedAdminRequest(request, env)) {
     return new Response(JSON.stringify({
       error: 'Unauthorized',
-      message: 'Admin secret required. Usage: /sendAll?secret=YOUR_SECRET'
+      message: 'Admin token required. Use X-Admin-Token header or legacy ?secret=YOUR_SECRET'
     }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -145,4 +203,32 @@ export async function handleSendAll(request: Request, env: Env): Promise<Respons
       headers: { 'Content-Type': 'application/json' },
     });
   }
+}
+
+/**
+ * 处理 /sendLatest 命令 - 发送最新 Release（需要管理员验证）
+ */
+export async function handleSendLatest(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'GET' && request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!isAuthorizedAdminRequest(request, env)) {
+    return new Response(JSON.stringify({
+      error: 'Unauthorized',
+      message: 'Admin token required. Use X-Admin-Token header or legacy ?secret=YOUR_SECRET'
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const result = await executeSendLatest(env);
+  return new Response(JSON.stringify(result), {
+    status: result.success ? 200 : 500,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }

@@ -332,6 +332,7 @@ export function generateAdminHtml(): string {
           <span class="card-title">操作</span>
         </div>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button class="action-btn" id="sendLatestBtn" onclick="sendLatestRelease()">发送最新 Release</button>
           <button class="action-btn" id="sendAllBtn" onclick="sendAllReleases()">发送所有 Release</button>
           <button class="action-btn" onclick="refreshChangelog()">刷新 Changelog</button>
         </div>
@@ -446,13 +447,15 @@ export function generateAdminHtml(): string {
     async function sendAllReleases() {
       const token = getToken();
       const btn = document.getElementById('sendAllBtn');
-      const result = document.getElementById('actionResult');
 
       btn.disabled = true;
       btn.textContent = '发送中...';
 
       try {
-        const res = await fetch('/sendAll?secret=' + encodeURIComponent(token), { method: 'POST' });
+        const res = await fetch('/sendAll', {
+          method: 'POST',
+          headers: { 'X-Admin-Token': token }
+        });
         const data = await res.json();
 
         if (res.ok && data.success) {
@@ -468,11 +471,41 @@ export function generateAdminHtml(): string {
       }
     }
 
+    async function sendLatestRelease() {
+      const token = getToken();
+      const btn = document.getElementById('sendLatestBtn');
+
+      btn.disabled = true;
+      btn.textContent = '发送中...';
+
+      try {
+        const res = await fetch('/sendLatest', {
+          method: 'POST',
+          headers: { 'X-Admin-Token': token }
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          const suffix = data.tagName ? (' (' + data.tagName + ')') : '';
+          showResult('success', '已发送最新 Release' + suffix);
+        } else {
+          showResult('error', data.message || '发送失败');
+        }
+      } catch (e) {
+        showResult('error', '网络错误: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '发送最新 Release';
+      }
+    }
+
     async function refreshChangelog() {
       const token = getToken();
 
       try {
-        const res = await fetch('/changelog/refresh?secret=' + encodeURIComponent(token));
+        const res = await fetch('/changelog/refresh', {
+          headers: { 'X-Admin-Token': token }
+        });
         const data = await res.json();
 
         if (res.ok && data.success) {

@@ -31,6 +31,7 @@ pnpm wrangler secret put ADMIN_USER_IDS        # 管理员 ID（可选）
 | `/changelog` | Changelog 页面 |
 | `/changelog.md` | Changelog 原始文件 |
 | `/sendAll` | 发送所有历史 Release |
+| `/sendLatest` | 发送最新 Release |
 
 ## 自动刷新
 

@@ -11,6 +11,7 @@ import {
   handleChangelogRefresh,
   handleChangelogOptions,
   handleSendAll,
+  handleSendLatest,
   handleTelegramWebhook,
   generateAdminHtml,
   handleGitHubWebhook,
@@ -59,12 +60,15 @@ export default {
       if (request.method === 'OPTIONS') {
         return handleChangelogOptions();
       }
-      const secret = url.searchParams.get('secret') || undefined;
-      return handleChangelogRefresh(env, secret);
+      return handleChangelogRefresh(request, env);
     }
 
     if (path === '/sendAll') {
       return handleSendAll(request, env);
+    }
+
+    if (path === '/sendLatest') {
+      return handleSendLatest(request, env);
     }
 
     if (path === '/' || path === '') {

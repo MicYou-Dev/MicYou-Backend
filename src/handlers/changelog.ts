@@ -78,14 +78,24 @@ export async function handleChangelogMdRequest(env: Env, secret?: string): Promi
   });
 }
 
+function isAuthorizedAdminRequest(request: Request, env: Env): boolean {
+  const url = new URL(request.url);
+  const querySecret = url.searchParams.get('secret');
+  const adminToken = request.headers.get('X-Admin-Token');
+
+  const byAdminToken = Boolean(env.ADMIN_PASSWORD && adminToken && adminToken === env.ADMIN_PASSWORD);
+  const byLegacySecret = Boolean(querySecret && querySecret === env.GITHUB_WEBHOOK_SECRET);
+  return byAdminToken || byLegacySecret;
+}
+
 /**
  * 处理 /changelog/refresh 请求 - 强制刷新 changelog
  */
-export async function handleChangelogRefresh(env: Env, secret?: string): Promise<Response> {
-  if (!secret || secret !== env.GITHUB_WEBHOOK_SECRET) {
+export async function handleChangelogRefresh(request: Request, env: Env): Promise<Response> {
+  if (!isAuthorizedAdminRequest(request, env)) {
     return new Response(JSON.stringify({
       error: 'Unauthorized',
-      message: 'Admin secret required. Usage: /changelog/refresh?secret=YOUR_SECRET'
+      message: 'Admin token required. Use X-Admin-Token header or legacy ?secret=YOUR_SECRET'
     }), {
       status: 401,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },

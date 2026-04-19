@@ -4,7 +4,7 @@
 
 import { Env } from '../types';
 import { getRepoFullName } from '../config';
-import { getChangelogFromKV, initializeChangelog } from '../changelog/kv';
+import { getChangelogFromKV, initializeChangelog, refreshChangelogByApiDiff } from '../changelog/kv';
 import { generateChangelogMarkdown } from '../changelog/generator';
 
 /** CORS 响应头 */
@@ -93,12 +93,14 @@ export async function handleChangelogRefresh(env: Env, secret?: string): Promise
   }
 
   try {
-    const data = await initializeChangelog(env);
+    const result = await refreshChangelogByApiDiff(env);
     return new Response(JSON.stringify({
       success: true,
-      message: 'Changelog refreshed successfully',
-      count: data.entries.length,
-      lastUpdated: data.lastUpdated
+      message: result.changed ? 'Changelog refreshed successfully' : 'No changes detected',
+      changed: result.changed,
+      reason: result.reason,
+      count: result.data.entries.length,
+      lastUpdated: result.data.lastUpdated
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },

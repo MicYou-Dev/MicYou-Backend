@@ -288,9 +288,9 @@ export function generateAdminHtml(): string {
           <button class="action-btn" onclick="refreshStatus()">刷新</button>
         </div>
         <div class="status-grid">
-          <div class="status-item online" id="webhookStatus">
+          <div class="status-item pending" id="webhookStatus">
             <div class="status-label">GitHub Webhook</div>
-            <div class="status-value success" id="webhookValue">正常</div>
+            <div class="status-value warning" id="webhookValue">检查中...</div>
           </div>
           <div class="status-item" id="changelogStatus">
             <div class="status-label">Changelog</div>
@@ -401,6 +401,24 @@ export function generateAdminHtml(): string {
           headers: { 'X-Admin-Token': token }
         });
         const data = await res.json();
+
+        if (data.webhook) {
+          const webhookEl = document.getElementById('webhookStatus');
+          const webhookValue = document.getElementById('webhookValue');
+          const hasMissingConfig = Array.isArray(data.webhook.missingConfig) && data.webhook.missingConfig.length > 0;
+
+          if (data.webhook.status === 'online' && !hasMissingConfig) {
+            webhookEl.className = 'status-item online';
+            webhookValue.className = 'status-value success';
+            webhookValue.textContent = '配置完整';
+          } else {
+            webhookEl.className = 'status-item offline';
+            webhookValue.className = 'status-value error';
+            webhookValue.textContent = hasMissingConfig
+              ? '缺失: ' + data.webhook.missingConfig.join(', ')
+              : (data.webhook.message || '配置异常');
+          }
+        }
 
         if (data.changelog) {
           const el = document.getElementById('changelogStatus');
@@ -533,10 +551,21 @@ export async function handleStatusRequest(request: Request, env: Env): Promise<R
 
   let changelogData = await getChangelogFromKV(env.CHANGELOG_KV);
 
+  const missingConfig: string[] = [];
+  if (!env.TG_BOT_TOKEN) missingConfig.push('TG_BOT_TOKEN');
+  if (!env.TG_CHAT_ID) missingConfig.push('TG_CHAT_ID');
+  if (!env.GITHUB_WEBHOOK_SECRET) missingConfig.push('GITHUB_WEBHOOK_SECRET');
+  if (!env.CHANGELOG_KV) missingConfig.push('CHANGELOG_KV');
+
+  const webhookHealthy = missingConfig.length === 0;
+
   const status = {
     webhook: {
-      status: 'online',
-      message: 'Webhook 端点正常',
+      status: webhookHealthy ? 'online' : 'offline',
+      message: webhookHealthy
+        ? 'Webhook 配置完整'
+        : `缺少配置: ${missingConfig.join(', ')}`,
+      missingConfig,
     },
     changelog: {
       count: changelogData?.entries?.length || 0,

@@ -4,6 +4,7 @@
  */
 
 import { Env } from './types';
+import { refreshChangelogByApiDiff } from './changelog';
 import {
   handleChangelogRequest,
   handleChangelogMdRequest,
@@ -73,5 +74,25 @@ export default {
     }
 
     return new Response('Not Found', { status: 404 });
+  },
+
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil((async () => {
+      try {
+        const result = await refreshChangelogByApiDiff(env);
+        console.log('[changelog-cron] refresh completed', {
+          cron: event.cron,
+          changed: result.changed,
+          reason: result.reason,
+          count: result.data.entries.length,
+          lastUpdated: result.data.lastUpdated,
+        });
+      } catch (error) {
+        console.error('[changelog-cron] refresh failed', {
+          cron: event.cron,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    })());
   },
 };

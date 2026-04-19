@@ -22,3 +22,6 @@ id = "30db7c2bf6994d00888c5e4a17007c80"  # 部署时需要替换为实际的 KV 
 [vars]
 # 非敏感配置可以放在这里
 ENVIRONMENT = "production"
+
+[triggers]
+crons = ["0 * * * *"]

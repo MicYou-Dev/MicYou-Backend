@@ -5,20 +5,20 @@
 ## 部署
 
 ```bash
-npm install
-npx wrangler login
-npm run deploy
+pnpm install
+pnpm wrangler login
+pnpm deploy
 ```
 
 ## 环境变量
 
 ```bash
-npx wrangler secret put TG_BOT_TOKEN        # Telegram Bot Token
-npx wrangler secret put TG_CHAT_ID          # 群组 ID
-npx wrangler secret put GITHUB_WEBHOOK_SECRET  # Webhook 密钥
-npx wrangler secret put GITHUB_TOKEN        # GitHub Token（可选）
-npx wrangler secret put TG_THREAD_ID        # 话题 ID（可选）
-npx wrangler secret put ADMIN_USER_IDS      # 管理员 ID（可选）
+pnpm wrangler secret put TG_BOT_TOKEN          # Telegram Bot Token
+pnpm wrangler secret put TG_CHAT_ID            # 群组 ID
+pnpm wrangler secret put GITHUB_WEBHOOK_SECRET # Webhook 密钥
+pnpm wrangler secret put GITHUB_TOKEN          # GitHub Token（可选）
+pnpm wrangler secret put TG_THREAD_ID          # 话题 ID（可选）
+pnpm wrangler secret put ADMIN_USER_IDS        # 管理员 ID（可选）
 ```
 
 ## 路由
@@ -32,10 +32,20 @@ npx wrangler secret put ADMIN_USER_IDS      # 管理员 ID（可选）
 | `/changelog.md` | Changelog 原始文件 |
 | `/sendAll` | 发送所有历史 Release |
 
+## 自动刷新
+
+- Worker 已配置每小时 Cron（`0 * * * *`）自动刷新 changelog。
+- 刷新逻辑会扫描 GitHub Releases API 并与 KV 现有数据对比，只有检测到变化才写入 KV。
+- 可通过 `pnpm tail` 查看日志关键字：`[changelog-cron]`。
+
 ## 常用命令
 
 ```bash
-npm run dev      # 本地开发
-npm run deploy   # 部署
-npm run tail     # 查看日志
+pnpm dev      # 本地开发
+pnpm deploy   # 部署
+pnpm tail     # 查看日志
 ```
+
+## 包管理器说明
+
+项目使用 pnpm 作为默认包管理器。请避免混用 npm/yarn，以免产生冲突锁文件。

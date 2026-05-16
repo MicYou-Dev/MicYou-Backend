@@ -18,7 +18,9 @@ export function truncateText(text: string, maxLength: number): string {
  */
 export function escapeMarkdown(text: string): string {
   if (!text) return '';
-  return text.replace(/([`_*[\](){}/])/g, '\\$1');
+  return text
+    .replace(/[*+]/g, '-')
+    .replace(/([`_[\](){}/])/g, '\\$1');
 }
 
 /**
@@ -33,8 +35,8 @@ export function convertMarkdownForTelegram(text: string): string {
   result = result.replace(/\*\*(.+?)\*\*/g, '*$1*');
   result = result.replace(/__(.+?)__/g, '*$1*');
   result = result.replace(/~~(.+?)~~/g, '$1');
-  result = result.replace(/([`_*[\]])/g, '\\$1');
-  result = result.replace(/\\\*/g, '*');
+  result = result.replace(/[*+]/g, '-');
+  result = result.replace(/([`_[\]])/g, '\\$1');
   result = result.replace(/\\`/g, '`');
 
   return result;
